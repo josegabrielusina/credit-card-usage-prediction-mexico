@@ -1,7 +1,7 @@
 # Linear Regression Analysis for Credit Card Usage Prediction in Mexico - Summary
 
 **Author:** José Gabriel Usiña Mogro  
-**Date:** [Fecha actual]  
+**Date:** September 2022
 
 ## Introduction
 Linear regression is employed to predict the usage of credit cards in Mexico, aiming to understand the factors influencing its use.

@@ -1,0 +1,262 @@
+---
+title: "Evidence 1"
+author: "José Gabriel Usiña Mogro"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: lumen 
+    toc: true
+    toc_float: true
+---
+```{r}
+
+```
+
+```{r include=FALSE,warning=FALSE}
+library(foreign)
+library(dplyr)        # data manipulation 
+library(forcats)      # to work with categorical variables
+library(ggplot2)      # data visualization 
+library(readr)        # read specific csv files
+library(janitor)      # data exploration and cleaning 
+library(Hmisc)        # several useful functions for data analysis 
+library(psych)        # functions for multivariate analysis 
+library(naniar)       # summaries and visualization of missing values NAs
+library(dlookr)       # summaries and visualization of missing values NAs
+library(corrplot)     # correlation plots
+library(jtools)       # presentation of regression analysis 
+library(lmtest)       # diagnostic checks - linear regression analysis 
+library(car)          # diagnostic checks - linear regression analysis
+library(olsrr)        # diagnostic checks - linear regression analysis 
+library(kableExtra)   # HTML table attributes
+library(gmodels)
+library(funModeling)  # create frequency tables
+library(stargazer)    # create publication quality tables
+library(effects)
+library(caret)        # Classification and Regression Training 
+library(glmnet)       # methods for prediction and plotting, and functions for cross-validation
+```
+
+# Introduction
+
+Linear regression is one of the simlpest ways of prediction in machine learning. It is important because it let is know how a indepedent variable explain a depedent variable so then we can predict this variable in more accurate way for the future with the the samllet error as possible.
+
+# Background
+
+-   **Economic Growing**
+
+People is recovering their economic since COVID-19 so this means that the economic environment is supporting the growth of the credit cards. Also this is impacted by the increase on the minimum wage of USCMA
+
+-   **Unbanked population diminshing**
+
+With more technology in the market, the financial companies are getting into the lives of the population making them get into banking life. This helps because this bank users are potential users of a credit card so this means more clients in the market.
+
+# Description of the Problem Situation
+
+The Problem Situation tell us about Financiera Ma, a financial company that provides services of credit card in Mexico. The problem is that the use of credit card is not going so good as they expected at the beginning of the year. In this case they compare the use of credit card with countries like Argentina or Brazil, and we can see that there is a big difference between them.
+
+The solution is that we could build models that help to see what factors motivate to use credit card in Mexico and know the rates of population using the credit card, so in Financiera Ma can make better calls in order to improve their income
+
+# Data ande Methodology
+
+## Importing data
+
+```{r}
+data_ps<-read.csv("ev1_data.csv")
+```
+
+## Describing dataset
+
+```{r}
+str(data_ps)
+```
+
+```{r}
+colSums(is.na(data_ps))
+```
+
+We have 238 NA´s in the monthly income
+
+## Transforming Data
+
+For this case we are going to change some variables as factor in order to have a better understanding of our variables
+
+```{r}
+data_ps$region<-as.factor(data_ps$region)
+data_ps$dCard<-as.factor(data_ps$dCard)
+data_ps$education<-as.factor(data_ps$education)
+data_ps$dPhone<-as.factor(data_ps$dPhone)
+```
+
+We have to assume that the monthly income is in thousands Also we have to consider that we have a variable called Age2, this variable contains the age squared that we can use in one of the models that we are going to do
+
+We are going to replace the Na's with the median
+
+```{r}
+data_ps$income[is.na(data_ps$income)]<-median(data_ps$income,na.rm=TRUE)  
+```
+
+## Descriptive Statistics
+
+```{r}
+summary(data_ps)
+```
+
+We can see some outliers at age, for example we have a Maximum age of 98, something unusual considering our entire dataset. It could be a mistake, or an actually rare observation
+
+Also we can see that we have observations with 0 on the monthly income. It is not so rare because it could be a credit card owned by a 18-year-old who is a student.
+
+An interesting outlier that we can see is that the maxium at useCard is 60. This could be a mistake on typing, or maybe someone actually use his/her credit card 60 times per month
+
+```{r}
+boxplot(data_ps)
+boxplot(select(data_ps,-"age2")) #I dedcided to make an new boxplot without Age2 (Squared), so we could aprreciate the other boxplots better
+```
+
+```{r}
+plot_normality(data_ps,useCard)
+```
+
+## Data Visualization
+
+```{r}
+ggplot(data=data_ps, mapping=aes(x=income, y=useCard, color=education)) + geom_point(size = 2.5)+labs(title="Use of Card by Income")
+```
+
+```{r}
+ggplot(data=data_ps,aes(x=income,y=dCard,fill=dCard))+geom_bar(stat = "identity")+facet_wrap("region")+labs(title="Income and dCard by Region")
+```
+
+```{r}
+ggplot(data=data_ps, mapping = aes(x=dPhone, y=useCard, color=education)) + geom_point(size=1, position='jitter')+labs(title="Use of Card by dPhone")
+```
+
+```{r}
+ggplot(data=data_ps,mapping= aes(x=age,y=useCard,fill=education))+
+  geom_bar(stat = "identity")+ facet_wrap("region")+labs(title="Use of Card by age divided by Region")
+```
+
+# Linear Regression Analysis
+
+## Model 1
+
+```{r}
+model1<-lm(useCard~age+region+income+education+dPhone,data=data_ps)
+summary(model1)
+```
+
+### Level of Accuracy
+
+```{r}
+AIC(model1)  
+RMSE(model1$fitted.values,data_ps$useCard)
+```
+
+### Diagnostic Test
+
+```{r}
+vif(model1) #Multicollinearity Test
+bptest(model1) #Hetereoscedasticity
+```
+
+## Model 2
+
+```{r}
+model2<-lm(useCard~age+age2+region+income+education+dPhone,data=data_ps)
+summary(model2)
+```
+
+### Level of Accuracy
+
+```{r}
+AIC(model2)  
+RMSE(model2$fitted.values,data_ps$useCard)
+```
+
+### Diagnostic Test
+
+```{r}
+vif(model2) #Multicollinearity Test
+bptest(model2) #Hetereoscedasticity
+```
+
+## Model 3
+
+```{r}
+model3<-lm(useCard~age+age2+income+dCard,data=data_ps)
+summary(model3)
+```
+
+### Level of Accuracy
+
+```{r}
+AIC(model3)  
+RMSE(model3$fitted.values,data_ps$useCard)
+```
+
+### Diagnostic Test
+
+```{r}
+vif(model3) #Multicollinearity Test
+bptest(model3) #Hetereoscedasticity
+```
+
+## Selection of the regression model
+
+After comparing the Diagnostic Tests and the Level of Accuracy of each model, the best model that fits the data it's model 1
+
+Model 1 has the lowest AIC and RMSE from all models. Also we do no have deal with Multicollinearity as we do with model 2 and 3.
+
+All models have Hetereoscedasticity. It might be caused by the different regions we are analizing
+
+## Interpretation of Results
+
+```{r}
+selected_model<-model1
+summary(selected_model)
+```
+
+In this case we can see that the variables that better explain the useCard (*dependent variable*) are income and education one (undergraduate level or higher).
+
+Bassed in the selected model, for 1000 dolars of monthly income, the use of Credit Card increase in 0.95 approximately and that people who has an undergraduate level or higher, the use of Credit Card increase by 1.46
+
+With a confidence level of 95%, another important variable is region 4, where people who lives there, increase their use of Card on 0.64
+
+## Predicted Values
+
+### Plot
+
+```{r}
+plot(x=predict(selected_model),y=data_ps$useCard,
+     xlab='Predicted useCard',ylab='Observed useCard',
+     main='Selected Model')
+abline(a=0,b=1,col="blue")
+```
+
+### Effect Plot
+
+I decided to use income variable because it is the most important variable that is numerical
+
+```{r}
+effect_plot(selected_model,pred=income,interval=TRUE)
+```
+
+We can see that there is a positive relationship between income and useCard
+
+# Conclusions and Recomendations
+
+## Insights
+Monthly income is related to have an undergraduate level or higher, and that would lead to have/use a Credit Card. This is related to the trend that was mentioned before, about the increase of the minimum wage and how this could impact in the increase of Credit Cards Market
+
+Age it is not a statistical siginifcant variable. This also is related with one of the trends metioned before. That trend mentioned that with the new technology, it is easier to people to get in to the Bank and Credit Card Markets, it doesn't matter the age or location.
+
+## Strategy
+It would be important to create a marketing and financial strategy to *attack* region 4 in order to get more customers for Financiera MA, in this way they are going to increase their income. The age it is not important, but monthly income is, so when they start to think about their strategy, their target should be people with a high income level.
+
+# References
+
+-   Swaminathan, S. (2019, 18 enero). Linear Regression --- Detailed View - Towards Data Science. Medium. <https://towardsdatascience.com/linear-regression-detailed-view-ea73175f6e86>
+
+-   Euromonitor. (s. f.). Euromonitor Login. Recuperado 25 de agosto de 2022, de <https://www.portal.euromonitor.com/portal/?7axeGm%2fi3HYMzICetCZTPWrA7b3R33ioPLjyUFTSVbq%2bDH4%2f9T7Q2g%3d%3d>
+
+
